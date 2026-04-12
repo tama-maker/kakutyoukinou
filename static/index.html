@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブログ生成エージェント</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      min-height: 100vh;
+    }
+    header {
+      background: #2563eb;
+      color: white;
+      padding: 1rem 2rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: #1e3a6e;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      margin-left: 0.4rem;
+      font-weight: 500;
+      vertical-align: middle;
+    }
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #2563eb; }
+    .content-area { min-height: 120px; }
+    .header-footer-area { min-height: 70px; }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .option-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+    }
+    .option-group input[type="number"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .option-group input[type="number"]:focus { border-color: #2563eb; }
+
+    .hf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 600px) { .hf-grid { grid-template-columns: 1fr; } }
+
+    .hf-label {
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .save-note {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.4rem;
+    }
+
+    button#generate-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 2rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button#generate-btn:hover { background: #1d4ed8; }
+    button#generate-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    #result { display: none; }
+
+    .meta-desc-box {
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: #166534;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .meta-desc-box .meta-label {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #15803d;
+      min-width: 5rem;
+      padding-top: 0.1rem;
+    }
+    .meta-copy-btn {
+      background: none;
+      border: 1px solid #15803d;
+      color: #15803d;
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .meta-copy-btn:hover { background: #15803d; color: white; }
+
+    .titles-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .titles-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 1rem;
+      background: #eff6ff;
+      border-radius: 6px;
+      border-left: 3px solid #2563eb;
+    }
+    .title-num {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #2563eb;
+      min-width: 1.5rem;
+    }
+    .title-text { flex: 1; font-size: 0.95rem; }
+    .copy-btn {
+      background: none;
+      border: 1px solid #2563eb;
+      color: #2563eb;
+      border-radius: 4px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: #2563eb; color: white; }
+
+    #article-text {
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      padding: 1rem;
+      background: #fafafa;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      min-height: 200px;
+    }
+    .article-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 0.5rem;
+    }
+
+    #status {
+      font-size: 0.85rem;
+      color: #6b7280;
+      min-height: 1.2rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 0.9rem;
+      height: 0.9rem;
+      border: 2px solid #d1d5db;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>ブログ生成エージェント <span style="font-size:0.8rem;opacity:0.8;">SEO・AIO対策</span></header>
+  <div class="container">
+
+    <!-- ヘッダー・フッター設定 -->
+    <div class="card">
+      <h2>ヘッダー・フッター設定 <span class="badge">自動保存</span></h2>
+      <div class="hf-grid">
+        <div>
+          <div class="hf-label">📌 ヘッダー（記事冒頭に毎回挿入）</div>
+          <textarea class="header-footer-area" id="header-text" placeholder="例：※この記事はXXが監修しています。"></textarea>
+        </div>
+        <div>
+          <div class="hf-label">📌 フッター（記事末尾に毎回挿入）</div>
+          <textarea class="header-footer-area" id="footer-text" placeholder="例：お問い合わせは〇〇まで。"></textarea>
+        </div>
+      </div>
+      <div class="save-note">※ 入力内容はブラウザに自動保存され、次回も引き継がれます。</div>
+    </div>
+
+    <!-- 内容入力 -->
+    <div class="card">
+      <h2>ブログの大まかな内容を入力</h2>
+      <textarea class="content-area" id="content" placeholder="例：最近ハマっているコーヒーのこと。自宅でのドリップ方法、豆の選び方、おすすめのお店など。"></textarea>
+    </div>
+
+    <!-- オプション -->
+    <div class="card">
+      <h2>生成オプション</h2>
+      <div class="options">
+        <div class="option-group">
+          <label>タイトル候補の数</label>
+          <input type="number" id="title-count" value="3" min="1" max="10">
+        </div>
+        <div class="option-group">
+          <label>タイトルの最大文字数</label>
+          <input type="number" id="title-max-chars" value="25" min="10" max="100">
+        </div>
+        <div class="option-group">
+          <label>記事の目安文字数</label>
+          <input type="number" id="article-max-chars" value="700" min="200" max="5000" step="100">
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <button id="generate-btn" onclick="generate()">生成する</button>
+      <span id="status"></span>
+    </div>
+
+    <!-- 結果 -->
+    <div id="result">
+      <div class="card">
+        <h2>メタディスクリプション <span class="badge">SEO</span></h2>
+        <div class="meta-desc-box">
+          <span class="meta-label">説明文</span>
+          <span id="meta-desc-text" style="flex:1;"></span>
+          <button class="meta-copy-btn" onclick="copyMeta()">コピー</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>タイトル候補</h2>
+        <ul class="titles-list" id="titles-list"></ul>
+      </div>
+      <div class="card">
+        <h2>記事</h2>
+        <div class="article-actions">
+          <button class="copy-btn" onclick="copyArticle()">記事全体をコピー</button>
+        </div>
+        <div id="article-text"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ヘッダー・フッターの自動保存・読み込み
+    const headerEl = document.getElementById('header-text');
+    const footerEl = document.getElementById('footer-text');
+
+    headerEl.value = localStorage.getItem('blog_header') || '';
+    footerEl.value = localStorage.getItem('blog_footer') || '';
+
+    headerEl.addEventListener('input', () => localStorage.setItem('blog_header', headerEl.value));
+    footerEl.addEventListener('input', () => localStorage.setItem('blog_footer', footerEl.value));
+
+    async function generate() {
+      const content = document.getElementById('content').value.trim();
+      if (!content) { alert('内容を入力してください。'); return; }
+
+      const btn = document.getElementById('generate-btn');
+      const status = document.getElementById('status');
+      const result = document.getElementById('result');
+      const titlesList = document.getElementById('titles-list');
+      const articleText = document.getElementById('article-text');
+      const metaDescText = document.getElementById('meta-desc-text');
+
+      btn.disabled = true;
+      status.innerHTML = '<span class="spinner"></span>SEO・AIO対策記事を生成中...';
+      result.style.display = 'none';
+      titlesList.innerHTML = '';
+      articleText.textContent = '';
+      metaDescText.textContent = '';
+
+      try {
+        const res = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content,
+            title_count: parseInt(document.getElementById('title-count').value),
+            title_max_chars: parseInt(document.getElementById('title-max-chars').value),
+            article_max_chars: parseInt(document.getElementById('article-max-chars').value),
+            header: headerEl.value,
+            footer: footerEl.value,
+          }),
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullText = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              parseAndRender(fullText, titlesList, articleText, metaDescText, result);
+              status.textContent = '生成完了';
+              btn.disabled = false;
+              return;
+            }
+            try { fullText += JSON.parse(data).chunk; } catch {}
+          }
+        }
+      } catch (e) {
+        status.textContent = 'エラーが発生しました。';
+        btn.disabled = false;
+      }
+    }
+
+    function parseAndRender(text, titlesList, articleText, metaDescText, result) {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        articleText.textContent = text;
+        showResult(result);
+        return;
+      }
+      try {
+        const data = JSON.parse(jsonMatch[0]);
+
+        // メタディスクリプション
+        metaDescText.textContent = data.meta_description || '';
+
+        // タイトル
+        titlesList.innerHTML = '';
+        (data.titles || []).forEach((title, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span class="title-num">#${i + 1}</span>
+            <span class="title-text">${escapeHtml(title)}</span>
+            <button class="copy-btn" onclick="copyText('${escapeAttr(title)}', this)">コピー</button>
+          `;
+          titlesList.appendChild(li);
+        });
+
+        // 記事
+        articleText.textContent = data.article || '';
+        showResult(result);
+      } catch {
+        articleText.textContent = text;
+        showResult(result);
+      }
+    }
+
+    function showResult(result) {
+      result.style.display = 'flex';
+      result.style.flexDirection = 'column';
+      result.style.gap = '1rem';
+    }
+
+    function copyText(text, btn) {
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
+    function copyMeta() {
+      const text = document.getElementById('meta-desc-text').textContent;
+      const btn = document.querySelector('.meta-copy-btn');
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ コピー済み';
+        setTimeout(() => btn.textContent = 'コピー', 1500);
+      });
+    }
+
+    function copyArticle() {
+      const text = document.getElementById('article-text').textContent;
+      const btn = event.target;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ コピー済み';
+        setTimeout(() => btn.textContent = '記事全体をコピー', 1500);
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escapeAttr(s) {
+      return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    }
+  </script>
+</body>
+</html>
