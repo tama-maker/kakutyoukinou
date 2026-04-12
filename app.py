@@ -1,15 +1,31 @@
 import os
 import json
 import anthropic
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
+import secrets
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+security = HTTPBasic()
+ACCESS_PASSWORD = os.environ.get("ACCESS_PASSWORD", "")
+
+def verify_password(credentials: HTTPBasicCredentials = Depends(security)):
+    if not ACCESS_PASSWORD:
+        return
+    correct = secrets.compare_digest(credentials.password.encode(), ACCESS_PASSWORD.encode())
+    if not correct:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="パスワードが違います",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
 
 class BlogRequest(BaseModel):
@@ -22,13 +38,13 @@ class BlogRequest(BaseModel):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root(credentials: HTTPBasicCredentials = Depends(verify_password)):
     with open("static/index.html", encoding="utf-8") as f:
         return f.read()
 
 
 @app.post("/generate")
-async def generate(req: BlogRequest):
+async def generate(req: BlogRequest, credentials: HTTPBasicCredentials = Depends(verify_password)):
     system_prompt = """あなたはSEO・AIO対策に精通したプロのブログライターです。
 ユーザーが提供するブログの大まかな内容をもとに、以下の2つを生成してください。
 
