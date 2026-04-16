@@ -32,7 +32,7 @@ class BlogRequest(BaseModel):
     content: str
     title_count: int = 3
     title_max_chars: int = 40
-    article_max_chars: int = 1000
+    article_max_chars: int = 600
     header: str = ""
     footer: str = ""
 
