@@ -398,7 +398,7 @@
         });
 
         // 記事
-        articleText.textContent = data.article || '';
+        articleText.textContent = insertLineBreaks(data.article || '');
         showResult(result);
       } catch {
         articleText.textContent = text;
@@ -436,6 +436,23 @@
         btn.textContent = '✓ コピー済み';
         setTimeout(() => btn.textContent = '記事全体をコピー', 1500);
       });
+    }
+
+    function insertLineBreaks(text, maxLen = 25) {
+      return text.split('\n').map(line => {
+        if (line.length <= maxLen) return line;
+        let result = '';
+        let count = 0;
+        for (const char of line) {
+          result += char;
+          count++;
+          if (count >= maxLen) {
+            result += '\n';
+            count = 0;
+          }
+        }
+        return result;
+      }).join('\n');
     }
 
     function escapeHtml(s) {
