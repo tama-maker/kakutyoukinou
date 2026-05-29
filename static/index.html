@@ -442,10 +442,7 @@
     }
 
     function copyAll() {
-      const meta = document.getElementById('meta-desc-text').textContent;
-      const titles = Array.from(document.querySelectorAll('.title-text')).map((el, i) => `タイトル${i+1}: ${el.textContent}`).join('\n');
-      const article = document.getElementById('article-text').textContent;
-      const text = `【メタディスクリプション】\n${meta}\n\n【タイトル候補】\n${titles}\n\n【記事】\n${article}`;
+      const text = document.getElementById('article-text').textContent;
       const btn = event.target;
       navigator.clipboard.writeText(text).then(() => {
         btn.textContent = '✓ コピー済み';
