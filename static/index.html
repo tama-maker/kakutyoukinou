@@ -276,6 +276,9 @@
 
     <!-- 結果 -->
     <div id="result">
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="copy-btn" style="padding:0.5rem 1.2rem; font-size:0.9rem;" onclick="copyAll()">全部コピー</button>
+      </div>
       <div class="card">
         <h2>メタディスクリプション <span class="badge">SEO</span></h2>
         <div class="meta-desc-box">
@@ -438,21 +441,20 @@
       });
     }
 
-    function insertLineBreaks(text, maxLen = 25) {
-      return text.split('\n').map(line => {
-        if (line.length <= maxLen) return line;
-        let result = '';
-        let count = 0;
-        for (const char of line) {
-          result += char;
-          count++;
-          if (count >= maxLen) {
-            result += '\n';
-            count = 0;
-          }
-        }
-        return result;
-      }).join('\n');
+    function copyAll() {
+      const meta = document.getElementById('meta-desc-text').textContent;
+      const titles = Array.from(document.querySelectorAll('.title-text')).map((el, i) => `タイトル${i+1}: ${el.textContent}`).join('\n');
+      const article = document.getElementById('article-text').textContent;
+      const text = `【メタディスクリプション】\n${meta}\n\n【タイトル候補】\n${titles}\n\n【記事】\n${article}`;
+      const btn = event.target;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = '✓ コピー済み';
+        setTimeout(() => btn.textContent = '全部コピー', 1500);
+      });
+    }
+
+    function insertLineBreaks(text) {
+      return text.replace(/。/g, '。\n').replace(/\n\n+/g, '\n\n');
     }
 
     function escapeHtml(s) {
